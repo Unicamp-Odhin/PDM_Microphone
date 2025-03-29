@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "spidev.h": "c",
+        "stdio.h": "c"
+    }
+}
