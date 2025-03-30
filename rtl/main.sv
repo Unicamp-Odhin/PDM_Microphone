@@ -69,12 +69,8 @@ SPI_Slave U1(
 );
 
 
-logic fifo_wr_en;
-logic fifo_rd_en;
-logic fifo_full;
-logic fifo_empty;
-logic [7:0] fifo_read_data;
-logic [7:0] fifo_write_data;
+logic fifo_wr_en, fifo_rd_en, fifo_full, fifo_empty;
+logic [7:0] fifo_read_data, fifo_write_data;
 
 FIFO #(
     .DEPTH        (32768), // 16kB

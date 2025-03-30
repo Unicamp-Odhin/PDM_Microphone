@@ -59,7 +59,7 @@ always_ff @(posedge clk ) begin
     if(!rst_n) begin
         data_out_valid <= 1'b0;
     end else begin
-        data_out_valid <= cs_active && rising_edge && (bit_count == 3'b111);
+        data_out_valid <= cs_active && rising_edge && &bit_count;
     end
 end
 
@@ -86,10 +86,10 @@ always_ff @(posedge clk ) begin
 end
 
 assign miso          = data_to_send[7];
-assign rising_edge   = (sck_sync[2:1] == 2'b01) ? 1'b1 : 1'b0;
-assign falling_edge  = (sck_sync[2:1] == 2'b10) ? 1'b1 : 1'b0;
+assign rising_edge   = ~sck_sync[2] & sck_sync[1]; // SCK rising edge
+assign falling_edge  = ~sck_sync[1] & sck_sync[2]; // SCK falling edge
 assign cs_active     = ~cs_sync[1];
-assign start_message = (cs_sync[2:1] == 2'b10) ? 1'b1 : 1'b0; // message starts in cs falling edge
-assign end_message   = (cs_sync[2:1] == 2'b01) ? 1'b1 : 1'b0; // message ends in cs rising edge
+assign start_message = ~cs_sync[1] & cs_sync[2]; // message starts in cs falling edge
+assign end_message   = ~cs_sync[2] & cs_sync[1]; // message ends in cs rising edge
 
 endmodule
