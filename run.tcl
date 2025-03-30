@@ -1,5 +1,7 @@
 read_verilog -sv main.sv
 read_verilog -sv spi_slave.sv
+read_verilog -sv pdm_capture_fir.sv
+read_verilog -sv fifo.sv
 
 read_xdc "pinout.xdc"
 set_property PROCESSING_ORDER EARLY [get_files pinout.xdc]

@@ -9,3 +9,5 @@ usage_statistics_webtalk.xml
 build/out.bit
 usage_statistics_webtalk.html
 build/
+.vscode
+old
