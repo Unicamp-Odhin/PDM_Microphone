@@ -39,7 +39,9 @@ logic pcm_ready;
 pdm_capture_fir #(
     .DECIMATION_FACTOR (64),
     .DATA_WIDTH        (16),
-    .FIR_TAPS          (16)
+    .FIR_TAPS          (16),
+    .CLK_FREQ          (100_000_000), // Frequência do clock do sistema
+    .PDM_CLK_FREQ      (2_822_400)    // Frequência do clock PDM
 ) u_pdm_capture_fir (
     .clk        (clk),
     .rst_n      (CPU_RESETN),
@@ -51,7 +53,9 @@ pdm_capture_fir #(
     .ready      (pcm_ready)
 );
 
-SPI_Slave U1(
+SPI_Slave #(
+    .SPI_BITS_PER_WORD (8)
+) U1(
     .clk            (clk),
     .rst_n          (CPU_RESETN),
 
@@ -73,7 +77,7 @@ logic fifo_wr_en, fifo_rd_en, fifo_full, fifo_empty;
 logic [7:0] fifo_read_data, fifo_write_data;
 
 FIFO #(
-    .DEPTH        (32768), // 16kB
+    .DEPTH        (524288), // 520kB
     .WIDTH        (8)
 ) tx_fifo (
     .clk          (clk),
@@ -88,10 +92,9 @@ FIFO #(
     .read_data_o  (fifo_read_data)
 );
 
-typedef enum logic [1:0] { 
+typedef enum logic { 
     IDLE,
-    WRITE_FIRST_BYTE,
-    WRITE_SECOND_BYTE
+    WRITE_FIRST_BYTE
 } write_fifo_state_t;
 
 write_fifo_state_t write_fifo_state;
@@ -114,13 +117,10 @@ always_ff @(posedge clk) begin
                 if(!fifo_full) begin
                     fifo_write_data <= pcm_out[15:8];
                     fifo_wr_en      <= 1'b1;
-                    write_fifo_state <= WRITE_SECOND_BYTE;
+                    write_fifo_state <= IDLE;
                 end else begin
                     fifo_wr_en <= 1'b0;
                 end
-            end
-            WRITE_SECOND_BYTE: begin
-                write_fifo_state <= IDLE;
             end
             default: write_fifo_state <= IDLE;
         endcase
@@ -147,7 +147,7 @@ always_ff @(posedge clk) begin
     end else begin
         if(busy_posedge) begin
             if(fifo_empty) begin
-                spi_send_data <= 8'b0;
+                spi_send_data <= fifo_read_data;
                 data_in_valid <= 1'b1;
             end else begin
                 fifo_rd_en <= 1'b1;
@@ -179,7 +179,7 @@ always_ff @(posedge clk) begin
 end
 
 assign busy_posedge = (busy_sync[2:1] == 2'b01) ? 1'b1 : 1'b0;
-assign M_LRSEL      = 1'b0; // Canal esquerdo
+assign M_LRSEL      = 1'b1; // Canal esquerdo
 assign LED          = pcm_out;
 
 endmodule
