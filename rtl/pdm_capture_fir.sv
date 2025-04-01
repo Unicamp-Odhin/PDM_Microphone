@@ -1,7 +1,7 @@
 module pdm_capture_fir #(
-    parameter DECIMATION_FACTOR = 128, // Fator de decimação para 16 kHz
+    parameter DECIMATION_FACTOR = 192, // Fator de decimação para 16 kHz
     parameter DATA_WIDTH        = 16,
-    parameter FIR_TAPS          = 16,  // Número de taps aumentado para melhor filtragem
+    parameter FIR_TAPS          = 32,  // Número de taps aumentado para melhor filtragem
     parameter CLK_FREQ          = 100_000_000, // Frequência do clock principal
     parameter PDM_CLK_FREQ      = 3_072_000   // Frequência do clock PDM (3.072 MHz)
 )(
@@ -25,7 +25,7 @@ module pdm_capture_fir #(
     logic [31:0] integrator;         // Integrador
     logic [31:0] comb, comb_reg;     // Comb e registrador de histórico
 
-    logic [7:0] decim_counter;
+    logic [8:0] decim_counter;
 
     // Filtro FIR
     logic signed [15:0] fir_buffer [0:FIR_TAPS-1];
@@ -41,8 +41,16 @@ module pdm_capture_fir #(
         fir_coeffs[6]  = 15;  fir_coeffs[7]  = 17;
         fir_coeffs[8]  = 19;  fir_coeffs[9]  = 21;
         fir_coeffs[10] = 22;  fir_coeffs[11] = 23;
-        fir_coeffs[12] = 24;  fir_coeffs[13] = 23;
-        fir_coeffs[14] = 22;  fir_coeffs[15] = 21;
+        fir_coeffs[12] = 24;  fir_coeffs[13] = 24;
+        fir_coeffs[14] = 23;  fir_coeffs[15] = 22;
+        fir_coeffs[16] = 21;  fir_coeffs[17] = 19;
+        fir_coeffs[18] = 17;  fir_coeffs[19] = 15;
+        fir_coeffs[20] = 13;  fir_coeffs[21] = 11;
+        fir_coeffs[22] = 8;   fir_coeffs[23] = 6;
+        fir_coeffs[24] = 4;   fir_coeffs[25] = 2;
+        fir_coeffs[26] = 1;   fir_coeffs[27] = 0;
+        fir_coeffs[28] = -1;  fir_coeffs[29] = -2;
+        fir_coeffs[30] = -4;  fir_coeffs[31] = -6;
     end
 
     always_ff @(posedge pdm_clk or negedge rst_n) begin
@@ -70,7 +78,6 @@ module pdm_capture_fir #(
                 comb <= integrator - comb_reg;
                 comb_reg <= integrator;
 
-                /*
                 // Desloca o buffer FIR
                 for (i = FIR_TAPS-1; i > 0; i = i - 1) begin
                     fir_buffer[i] <= fir_buffer[i-1];
@@ -85,8 +92,8 @@ module pdm_capture_fir #(
 
                 // Normalização
                 pcm_out <= fir_acc[31:16]; // Ajuste para saída de 16 bits
-                */
-                pcm_out <= comb[31:16]; // Saída do filtro comb
+
+                //pcm_out <= comb[15:0]; // Saída do filtro comb
                 ready <= 1'b1;
             end else begin
                 ready <= 1'b0;

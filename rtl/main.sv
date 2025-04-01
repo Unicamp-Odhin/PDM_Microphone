@@ -36,12 +36,13 @@ logic [15:0] pcm_out;
 logic pcm_ready;
 
 // Instanciação do módulo
+/*
 pdm_capture_fir #(
-    .DECIMATION_FACTOR (64),
+    .DECIMATION_FACTOR (192),
     .DATA_WIDTH        (16),
-    .FIR_TAPS          (16),
+    .FIR_TAPS          (32),
     .CLK_FREQ          (100_000_000), // Frequência do clock do sistema
-    .PDM_CLK_FREQ      (2_822_400)    // Frequência do clock PDM
+    .PDM_CLK_FREQ      (3_072_000)    // Frequência do clock PDM
 ) u_pdm_capture_fir (
     .clk        (clk),
     .rst_n      (CPU_RESETN),
@@ -50,6 +51,20 @@ pdm_capture_fir #(
     .pdm_data   (M_DATA),
 
     .pcm_out    (pcm_out),
+    .ready      (pcm_ready)
+);
+*/
+pdm_deserializer #(
+    .CLK_FREQ          (100_000_000), // Frequência do clock do sistema
+    .PDM_CLK_FREQ      (3_072_000)    // Frequência do clock PDM
+) u_pdm_capture_fir (
+    .clk        (clk),
+    .rst_n      (CPU_RESETN),
+
+    .pdm_clk    (M_CLK),
+    .pdm_data   (M_DATA),
+
+    .data_out   (pcm_out),
     .ready      (pcm_ready)
 );
 
@@ -178,8 +193,8 @@ always_ff @(posedge clk) begin
     end
 end
 
-assign busy_posedge = (busy_sync[2:1] == 2'b01) ? 1'b1 : 1'b0;
-assign M_LRSEL      = 1'b1; // Canal esquerdo
+assign busy_posedge = ~busy_sync[2] & busy_sync[1];
+assign M_LRSEL      = 1'b0; // Canal esquerdo
 assign LED          = pcm_out;
 
 endmodule
