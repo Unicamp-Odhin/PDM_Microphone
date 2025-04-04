@@ -74,23 +74,6 @@ pdm_deserializer #(
     .data_out   (pcm_out),
     .ready      (pcm_ready)
 );
-
-
-i2s_receiver #(
-    .CLK_FREQ     (100_000_000), // Frequência do clock do sistema
-    .I2S_CLK_FREQ (3_072_000),    // Frequência do clock I2S
-    .DATA_WIDTH   (16) // Definição do parâmetro de largura de dados (pode ser ajustado conforme necessário)
-) u_i2s_receiver (
-    .clk        (clk),         // Conecte o clock do sistema
-    .rst_n      (CPU_RESETN),       // Conecte o reset ativo baixo
-
-    .i2s_clk_o  (i2s_clk),   // Saída do clock I2S
-    .i2s_ws_o   (i2s_ws),    // Saída do word select I2S
-    .i2s_data_i (i2s_sd),  // Entrada de dados I2S
-    
-    .pcm_data_o (pcm_out),  // Saída de dados PCM
-    .ready_o    (pcm_ready)      // Sinal de pronto
-);
 */
 
 SPI_Slave #(

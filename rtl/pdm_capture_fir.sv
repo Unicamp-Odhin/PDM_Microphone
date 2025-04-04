@@ -19,6 +19,7 @@ module pdm_capture_fir #(
 
     logic [LAST_BIT_COUNTER:0] decimator_cnt;
     logic pdm_posedge;
+    logic cic_ready;
     logic [1:0] edge_counter;
 
     logic signed [31:0] integrator [0:CIC_STAGES-1];
@@ -36,9 +37,9 @@ module pdm_capture_fir #(
 
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            pdm_clk <= 0;
+            pdm_clk       <= 0;
             decimator_cnt <= 0;
-            edge_counter <= 0;
+            edge_counter  <= 0;
         end else begin
             if (decimator_cnt >= (PDM_CLK_PERIOD / 2)) begin
                 pdm_clk <= ~pdm_clk;
@@ -68,11 +69,12 @@ module pdm_capture_fir #(
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             for (i = 0; i < CIC_STAGES; i = i + 1) begin
-                comb[i] <= 0;
+                comb[i]       <= 0;
                 comb_delay[i] <= 0;
             end
-            ready <= 0;
+
             decim_counter <= 0;
+            cic_ready     <= 0;
         end else if (pdm_posedge) begin
             if (decim_counter == (DECIMATION_FACTOR - 1)) begin
                 decim_counter <= 0;
@@ -87,10 +89,10 @@ module pdm_capture_fir #(
 
                 pcm_temp <= comb[CIC_STAGES-1][31:16];
                 //pcm_out <= comb[CIC_STAGES-1][31:16];
-                ready <= 1;
+                cic_ready <= 1;
             end else begin
                 decim_counter <= decim_counter + 1;
-                ready <= 0;
+                cic_ready <= 0;
             end
         end
     end
@@ -98,11 +100,13 @@ module pdm_capture_fir #(
     // FIR Filter Stage
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            fir_sum <= 0;
+            fir_sum   <= 0;
             fir_index <= 0;
+            pcm_out   <= 0;
+            ready     <= 0;
+
             for (i = 0; i < FIR_TAPS; i = i + 1) fir_buffer[i] <= 0;
-            pcm_out <= 0;
-        end else if (ready) begin
+        end else if (cic_ready) begin
             // Atualiza o buffer com o novo valor de entrada
             fir_buffer[fir_index] <= pcm_temp;
             fir_index <= (fir_index + 1) % FIR_TAPS;
@@ -115,6 +119,9 @@ module pdm_capture_fir #(
 
             // Normaliza a saída e envia para pcm_out
             pcm_out <= fir_sum / FIR_TAPS;
+            ready   <= 1'b1;
+        end else begin
+            ready <= 1'b0;
         end
     end
 endmodule
