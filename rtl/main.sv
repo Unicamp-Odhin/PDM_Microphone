@@ -23,7 +23,13 @@ module top (
     output logic M_CLK,      // Clock do microfone
     output logic M_LRSEL,    // Left/Right Select (Escolha do canal)
 
-    input  logic M_DATA      // Dados do microfone
+    input  logic M_DATA,     // Dados do microfone
+
+    output logic i2s_clk,    // Clock do I2S
+    output logic i2s_ws,     // Word Select do I2S
+    input  logic i2s_sd,     // Dados do I2S
+
+    output logic [7:0] JC
 );
 
 logic [2:0] busy_sync;
@@ -36,13 +42,14 @@ logic [15:0] pcm_out;
 logic pcm_ready;
 
 // Instanciação do módulo
-/*
+
 pdm_capture_fir #(
-    .DECIMATION_FACTOR (192),
+    .DECIMATION_FACTOR (256),
     .DATA_WIDTH        (16),
-    .FIR_TAPS          (32),
+    .FIR_TAPS          (128),
     .CLK_FREQ          (100_000_000), // Frequência do clock do sistema
-    .PDM_CLK_FREQ      (3_072_000)    // Frequência do clock PDM
+    .PDM_CLK_FREQ      (3_072_000),   // Frequência do clock PDM
+    .CIC_STAGES        (5)            // Número de estágios do CIC
 ) u_pdm_capture_fir (
     .clk        (clk),
     .rst_n      (CPU_RESETN),
@@ -53,7 +60,7 @@ pdm_capture_fir #(
     .pcm_out    (pcm_out),
     .ready      (pcm_ready)
 );
-*/
+/*
 pdm_deserializer #(
     .CLK_FREQ          (100_000_000), // Frequência do clock do sistema
     .PDM_CLK_FREQ      (3_072_000)    // Frequência do clock PDM
@@ -67,6 +74,24 @@ pdm_deserializer #(
     .data_out   (pcm_out),
     .ready      (pcm_ready)
 );
+
+
+i2s_receiver #(
+    .CLK_FREQ     (100_000_000), // Frequência do clock do sistema
+    .I2S_CLK_FREQ (3_072_000),    // Frequência do clock I2S
+    .DATA_WIDTH   (16) // Definição do parâmetro de largura de dados (pode ser ajustado conforme necessário)
+) u_i2s_receiver (
+    .clk        (clk),         // Conecte o clock do sistema
+    .rst_n      (CPU_RESETN),       // Conecte o reset ativo baixo
+
+    .i2s_clk_o  (i2s_clk),   // Saída do clock I2S
+    .i2s_ws_o   (i2s_ws),    // Saída do word select I2S
+    .i2s_data_i (i2s_sd),  // Entrada de dados I2S
+    
+    .pcm_data_o (pcm_out),  // Saída de dados PCM
+    .ready_o    (pcm_ready)      // Sinal de pronto
+);
+*/
 
 SPI_Slave #(
     .SPI_BITS_PER_WORD (8)
@@ -196,6 +221,21 @@ end
 assign busy_posedge = ~busy_sync[2] & busy_sync[1];
 assign M_LRSEL      = 1'b0; // Canal esquerdo
 assign LED          = pcm_out;
+
+assign VGA_R  = 4'b0000;
+assign VGA_G  = 4'b0000;
+assign VGA_B  = 4'b0000;
+assign VGA_HS = 1'b0;
+assign VGA_VS = 1'b0;
+
+assign JC[0] = ~fifo_empty;
+assign JC[1] = 1'b1;
+assign JC[2] = ~fifo_full;
+assign JC[3] = 1'b1;
+assign JC[4] = ~busy;
+assign JC[5] = 1'b1;
+assign JC[6] = 1'b1;
+assign JC[7] = 1'b1;
 
 endmodule
 

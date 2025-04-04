@@ -1,122 +1,120 @@
 module pdm_capture_fir #(
-    parameter DECIMATION_FACTOR = 192, // Fator de decimação para 16 kHz
+    parameter DECIMATION_FACTOR = 128,
     parameter DATA_WIDTH        = 16,
-    parameter FIR_TAPS          = 32,  // Número de taps aumentado para melhor filtragem
-    parameter CLK_FREQ          = 100_000_000, // Frequência do clock principal
-    parameter PDM_CLK_FREQ      = 3_072_000   // Frequência do clock PDM (3.072 MHz)
+    parameter FIR_TAPS          = 64,
+    parameter CLK_FREQ          = 100_000_000,
+    parameter PDM_CLK_FREQ      = 3_072_000,
+    parameter CIC_STAGES        = 3
 )(
-    input  logic        clk,         // Clock principal (100 MHz)
-    input  logic        rst_n,       // Reset ativo baixo
-
-    output logic        pdm_clk,     // Clock fornecido ao microfone PDM
-    input  logic        pdm_data,    // Dados PDM recebidos do microfone
-    output logic [15:0] pcm_out,     // Áudio PCM filtrado
-
-    output logic        ready        // Sinal de pronto para leitura de PCM
+    input  logic                    clk,
+    input  logic                    rst_n,
+    output logic                    pdm_clk,
+    input  logic                    pdm_data,
+    output logic [DATA_WIDTH - 1:0] pcm_out,
+    output logic                    ready
 );
 
     localparam PDM_CLK_PERIOD   = CLK_FREQ / PDM_CLK_FREQ;
     localparam LAST_BIT_COUNTER = $clog2(PDM_CLK_PERIOD);
 
-    // Clock PDM (3.072 MHz)
-    logic [LAST_BIT_COUNTER:0] decimator_cnt = 0;
+    logic [LAST_BIT_COUNTER:0] decimator_cnt;
+    logic pdm_posedge;
+    logic [1:0] edge_counter;
 
-    // Filtros CIC
-    logic [31:0] integrator;         // Integrador
-    logic [31:0] comb, comb_reg;     // Comb e registrador de histórico
+    logic signed [31:0] integrator [0:CIC_STAGES-1];
+    logic signed [31:0] comb [0:CIC_STAGES-1];
+    logic signed [31:0] comb_delay [0:CIC_STAGES-1];
+    logic [15:0] fir_buffer [0:FIR_TAPS-1];
+    logic signed [31:0] fir_sum;
 
-    logic [8:0] decim_counter;
-
-    // Filtro FIR
-    logic signed [15:0] fir_buffer [0:FIR_TAPS-1];
-    logic signed [15:0] fir_coeffs [0:FIR_TAPS-1];
-    logic signed [31:0] fir_acc;
     integer i;
 
-    initial begin
-        // Coeficientes gerados usando uma janela Hamming para passa-baixa com corte em 8 kHz
-        fir_coeffs[0]  = 2;   fir_coeffs[1]  = 4;
-        fir_coeffs[2]  = 6;   fir_coeffs[3]  = 8;
-        fir_coeffs[4]  = 11;  fir_coeffs[5]  = 13;
-        fir_coeffs[6]  = 15;  fir_coeffs[7]  = 17;
-        fir_coeffs[8]  = 19;  fir_coeffs[9]  = 21;
-        fir_coeffs[10] = 22;  fir_coeffs[11] = 23;
-        fir_coeffs[12] = 24;  fir_coeffs[13] = 24;
-        fir_coeffs[14] = 23;  fir_coeffs[15] = 22;
-        fir_coeffs[16] = 21;  fir_coeffs[17] = 19;
-        fir_coeffs[18] = 17;  fir_coeffs[19] = 15;
-        fir_coeffs[20] = 13;  fir_coeffs[21] = 11;
-        fir_coeffs[22] = 8;   fir_coeffs[23] = 6;
-        fir_coeffs[24] = 4;   fir_coeffs[25] = 2;
-        fir_coeffs[26] = 1;   fir_coeffs[27] = 0;
-        fir_coeffs[28] = -1;  fir_coeffs[29] = -2;
-        fir_coeffs[30] = -4;  fir_coeffs[31] = -6;
-    end
+    logic [8:0] decim_counter;
+    logic [DATA_WIDTH-1:0] pcm_temp;
+    logic [15:0] sample_count;
+    logic [5:0] fir_index;
 
-    always_ff @(posedge pdm_clk or negedge rst_n) begin
+    always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            integrator    <= 0;
-            comb          <= 0;
-            comb_reg      <= 0;
-            pcm_out       <= 0;
-            ready         <= 0;
-            decim_counter <= 0;
-        end else begin
-            // Filtro Integrador
-            if (pdm_data)
-                integrator <= integrator + 1;
-            else
-                integrator <= integrator - 1;
-
-            // Contador de Decimação
-            decim_counter <= decim_counter + 1;
-
-            if (decim_counter == DECIMATION_FACTOR) begin
-                decim_counter <= 0;
-
-                // Filtro Comb
-                comb <= integrator - comb_reg;
-                comb_reg <= integrator;
-
-                // Desloca o buffer FIR
-                for (i = FIR_TAPS-1; i > 0; i = i - 1) begin
-                    fir_buffer[i] <= fir_buffer[i-1];
-                end
-                fir_buffer[0] <= comb[31:16];
-
-                // FIR passa-baixa
-                fir_acc = 0;
-                for (i = 0; i < FIR_TAPS; i = i + 1) begin
-                    fir_acc = fir_acc + fir_buffer[i] * fir_coeffs[i];
-                end
-
-                // Normalização
-                pcm_out <= fir_acc[31:16]; // Ajuste para saída de 16 bits
-
-                //pcm_out <= comb[15:0]; // Saída do filtro comb
-                ready <= 1'b1;
-            end else begin
-                ready <= 1'b0;
-            end
-        end
-    end
-
-    always_ff @(posedge clk) begin
-        if (!rst_n) begin
-            pdm_clk       <= 1'b0;
+            pdm_clk <= 0;
             decimator_cnt <= 0;
+            edge_counter <= 0;
         end else begin
-            if (decimator_cnt < PDM_CLK_PERIOD / 2)
-                pdm_clk <= 1'b1;
-            else
-                pdm_clk <= 1'b0;
-
-            if (decimator_cnt == PDM_CLK_PERIOD) begin
+            if (decimator_cnt >= (PDM_CLK_PERIOD / 2)) begin
+                pdm_clk <= ~pdm_clk;
                 decimator_cnt <= 0;
             end else begin
                 decimator_cnt <= decimator_cnt + 1;
             end
+
+            edge_counter <= {edge_counter[0], pdm_clk};
         end
     end
 
+    assign pdm_posedge = ~edge_counter[1] & edge_counter[0];
+
+// CIC Integrator Stage
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            for (i = 0; i < CIC_STAGES; i = i + 1) integrator[i] <= 0;
+        end else if (pdm_posedge) begin
+            integrator[0] <= integrator[0] + (pdm_data ? 1 : -1);
+            for (i = 1; i < CIC_STAGES; i = i + 1)
+                integrator[i] <= integrator[i] + integrator[i-1];
+        end
+    end
+
+    // CIC Comb Stage
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            for (i = 0; i < CIC_STAGES; i = i + 1) begin
+                comb[i] <= 0;
+                comb_delay[i] <= 0;
+            end
+            ready <= 0;
+            decim_counter <= 0;
+        end else if (pdm_posedge) begin
+            if (decim_counter == (DECIMATION_FACTOR - 1)) begin
+                decim_counter <= 0;
+
+                comb[0] <= integrator[CIC_STAGES-1] - comb_delay[0];
+                comb_delay[0] <= integrator[CIC_STAGES-1];
+                
+                for (i = 1; i < CIC_STAGES; i = i + 1) begin
+                    comb[i] <= comb[i-1] - comb_delay[i];
+                    comb_delay[i] <= comb[i-1];
+                end
+
+                pcm_temp <= comb[CIC_STAGES-1][31:16];
+                //pcm_out <= comb[CIC_STAGES-1][31:16];
+                ready <= 1;
+            end else begin
+                decim_counter <= decim_counter + 1;
+                ready <= 0;
+            end
+        end
+    end
+
+    // FIR Filter Stage
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            fir_sum <= 0;
+            fir_index <= 0;
+            for (i = 0; i < FIR_TAPS; i = i + 1) fir_buffer[i] <= 0;
+            pcm_out <= 0;
+        end else if (ready) begin
+            // Atualiza o buffer com o novo valor de entrada
+            fir_buffer[fir_index] <= pcm_temp;
+            fir_index <= (fir_index + 1) % FIR_TAPS;
+
+            // Calcula a soma de todos os taps do filtro FIR
+            fir_sum = 0;
+            for (i = 0; i < FIR_TAPS; i = i + 1) begin
+                fir_sum = fir_sum + fir_buffer[i];
+            end
+
+            // Normaliza a saída e envia para pcm_out
+            pcm_out <= fir_sum / FIR_TAPS;
+        end
+    end
 endmodule

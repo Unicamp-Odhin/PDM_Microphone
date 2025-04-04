@@ -1,6 +1,6 @@
 module pdm_deserializer #(
-    parameter CLK_FREQ          = 100_000_000, // Frequência do clock principal
-    parameter PDM_CLK_FREQ      = 3_072_000   // Frequência do clock PDM (3.072 MHz)
+    parameter CLK_FREQ     = 100_000_000, // Frequência do clock principal
+    parameter PDM_CLK_FREQ = 3_072_000    // Frequência do clock PDM (3.072 MHz)
 )(
     input  logic        clk,         // Clock principal (100 MHz)
     input  logic        rst_n,       // Reset ativo baixo
