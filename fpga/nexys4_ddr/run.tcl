@@ -1,8 +1,8 @@
-read_verilog -sv rtl/main.sv
-read_verilog -sv rtl/spi_slave.sv
-read_verilog -sv rtl/pdm_capture_fir.sv
-#read_verilog -sv rtl/pdm_deserializer.sv
-read_verilog -sv rtl/fifo.sv
+read_verilog -sv ../../rtl/main.sv
+read_verilog -sv ../../rtl/spi_slave.sv
+read_verilog -sv ../../rtl/pdm_capture_fir.sv
+#read_verilog -sv ../../rtl/pdm_deserializer.sv
+read_verilog -sv ../../rtl/fifo.sv
 
 set_param general.maxThreads 16
 
