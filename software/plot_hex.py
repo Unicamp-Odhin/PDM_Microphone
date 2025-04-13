@@ -14,6 +14,9 @@ def read_hex_file(filename):
                 value = int(hex_value, 16)
                 if value >= 0x8000:  # Se o número é negativo em complemento de dois
                     value -= 0x10000
+                
+                #value = value - 2153
+                #value = value - 17337
                 data.append(value)
     return np.array(data)
 

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ -z "$1" ]; then
-    nome_do_arquivo="./build/out.bit,.cxxccxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.,.,,," 
+    nome_do_arquivo="./build/out.bit" 
 else
     nome_do_arquivo=$1
 fi

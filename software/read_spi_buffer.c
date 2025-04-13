@@ -10,6 +10,7 @@
 #define DEVICE "/dev/spidev1.0"
 #define DELAY 0
 #define READ_SIZE 32  // Número de bytes que queremos ler (ajuste conforme necessário)
+#define PAGE_SIZE 4096 // Tamanho da página do dispositivo (ajuste conforme necessário)
 
 // Variáveis globais
 static uint32_t SPEED = 500000;

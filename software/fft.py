@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from scipy.fft import fft, fftfreq
 
 # Carregar os dados do arquivo .hex
-filename = "../hex/outputf.hex"
+filename = "dump.hex"
 with open(filename, "r") as file:
     data = np.array([int(line.strip(), 16) for line in file])
 
@@ -33,7 +33,7 @@ plt.legend()
 plt.show()
 
 # Parâmetros do sinal
-fs = 16000  # Frequência de amostragem (Hz)
+fs = 12000  # Frequência de amostragem (Hz)
 N = len(data_suave)  # Número total de amostras
 
 # Aplicar FFT no sinal suavizado

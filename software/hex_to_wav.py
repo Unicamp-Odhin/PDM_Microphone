@@ -2,13 +2,22 @@ import wave
 import sys
 import struct
 import os
+import numpy as np
 
 # Configurações do arquivo WAV
-SAMPLE_RATE = 16000  # Frequência de amostragem (em Hz)
+SAMPLE_RATE = 12000  # Frequência de amostragem (em Hz)
 NUM_CHANNELS = 1     # Número de canais (1 = mono, 2 = estéreo)
 SAMPLE_WIDTH = 2     # Largura de amostra (em bytes, 2 = 16 bits)
-AMPLITUDE = 32767    # Amplitude máxima para 16 bits
-LITTLE_ENDIAN = False  # Altere para False para usar big-endian
+
+def hex_para_int_complemento_2(hex_valor, num_bits=16):
+    # Converte o valor hexadecimal para inteiro (base 16)
+    valor_int = int(hex_valor, 16)
+    
+    # Se o valor for maior ou igual a 2^(num_bits - 1), ele é negativo (complemento de 2)
+    if valor_int >= 2**(num_bits - 1):
+        valor_int -= 2**num_bits
+    
+    return valor_int
 
 
 def hex_to_wav(input_file, output_file):
@@ -17,18 +26,30 @@ def hex_to_wav(input_file, output_file):
 
 
     audio_data = []
-    for line in hex_lines[:len(hex_lines) // 6]:
-        line = line.strip()
-        if len(line) == 4:
-            byte1 = int(line[:2], 16)
-            byte2 = int(line[2:], 16)
-            if LITTLE_ENDIAN:
-                sample = (byte2 << 8) | byte1
-            else:
-                sample = (byte1 << 8) | byte2
-            if sample >= 32768:
-                sample -= 65536
-            audio_data.append(sample)
+    for line in hex_lines:
+        sample = int(line, 16)
+        if sample >= 0x8000:  # Se o número é negativo em complemento de dois
+            sample -= 0x10000
+
+        #sample = sample - 15000
+
+        #sample = sample - 2153
+        audio_data.append(sample)
+
+    # 1. Converte para array NumPy
+    audio_data = np.array(audio_data, dtype=np.float32)
+
+    # 2. Remove offset (centraliza em torno de zero)
+    audio_data -= np.mean(audio_data)
+
+    # 3. Normaliza para int16 (amplitude máxima de -32768 a 32767)
+    amp = np.max(np.abs(audio_data))
+    if amp > 0:
+        audio_data = (audio_data * 32767 / amp).clip(-32768, 32767).astype(np.int16)
+
+
+    #mean_val = np.mean(audio_data)
+    #audio_data = (audio_data - mean_val).astype(np.int16)
 
     with wave.open(output_file, 'w') as wav_file:
         wav_file.setnchannels(NUM_CHANNELS)

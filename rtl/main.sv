@@ -46,10 +46,10 @@ logic pcm_ready;
 pdm_capture_fir #(
     .DECIMATION_FACTOR (256),
     .DATA_WIDTH        (16),
-    .FIR_TAPS          (128),
+    .FIR_TAPS          (64),
     .CLK_FREQ          (100_000_000), // Frequência do clock do sistema
     .PDM_CLK_FREQ      (3_072_000),   // Frequência do clock PDM
-    .CIC_STAGES        (5)            // Número de estágios do CIC
+    .CIC_STAGES        (4)            // Número de estágios do CIC
 ) u_pdm_capture_fir (
     .clk        (clk),
     .rst_n      (CPU_RESETN),
