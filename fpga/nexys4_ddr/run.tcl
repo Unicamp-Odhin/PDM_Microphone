@@ -1,6 +1,8 @@
 read_verilog -sv ../../rtl/main.sv
 read_verilog -sv ../../rtl/spi_slave.sv
 read_verilog -sv ../../rtl/pdm_capture_fir.sv
+read_verilog -sv ../../rtl/down_sample_and_resolution.sv
+#read_verilog -sv ../../rtl/cic_decimator.sv
 #read_verilog -sv ../../rtl/pdm_deserializer.sv
 read_verilog -sv ../../rtl/fifo.sv
 

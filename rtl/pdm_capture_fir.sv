@@ -127,8 +127,6 @@ module pdm_capture_fir #(
         end
     end
 
-    logic signed [DATA_WIDTH - 1:0] pcm_out_old;
-
     always_ff @( posedge clk ) begin
         if (!rst_n) begin
             fir_sum <= 0;
@@ -136,7 +134,6 @@ module pdm_capture_fir #(
             ready   <= 0;
         end else if(fir_ready) begin
             pcm_out <= $signed(fir_avg[15:0]);
-            pcm_out_old <= pcm_out;
             ready   <= 1;
         end else begin
             ready   <= 0;

@@ -16,7 +16,8 @@ def read_hex_file(filename):
                     value -= 0x10000
                 
                 #value = value - 2153
-                #value = value - 17337
+                value = value - 17337
+                value = value * 4
                 data.append(value)
     return np.array(data)
 

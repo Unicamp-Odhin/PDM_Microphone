@@ -11,6 +11,7 @@ module top (
     output logic miso,
     input  logic sck,
     input  logic cs,
+    output logic taqui, 
 
     input  logic [15:0] SW,
 
@@ -48,7 +49,7 @@ pdm_capture_fir #(
     .DATA_WIDTH        (16),
     .FIR_TAPS          (64),
     .CLK_FREQ          (100_000_000), // Frequência do clock do sistema
-    .PDM_CLK_FREQ      (3_072_000),   // Frequência do clock PDM
+    .PDM_CLK_FREQ      (1_800_000),   // Frequência do clock PDM
     .CIC_STAGES        (4)            // Número de estágios do CIC
 ) u_pdm_capture_fir (
     .clk        (clk),
@@ -60,21 +61,20 @@ pdm_capture_fir #(
     .pcm_out    (pcm_out),
     .ready      (pcm_ready)
 );
-/*
-pdm_deserializer #(
-    .CLK_FREQ          (100_000_000), // Frequência do clock do sistema
-    .PDM_CLK_FREQ      (3_072_000)    // Frequência do clock PDM
-) u_pdm_capture_fir (
+
+logic valid_processed;
+logic [7:0] processed_sample_out;
+
+down_sample_and_resolution u_downsample (
     .clk        (clk),
     .rst_n      (CPU_RESETN),
 
-    .pdm_clk    (M_CLK),
-    .pdm_data   (M_DATA),
+    .valid_in   (pcm_ready),
+    .data_in    (pcm_out),
 
-    .data_out   (pcm_out),
-    .ready      (pcm_ready)
+    .valid_out  (valid_processed),
+    .data_out   (processed_sample_out)
 );
-*/
 
 SPI_Slave #(
     .SPI_BITS_PER_WORD (8)
@@ -128,7 +128,11 @@ always_ff @(posedge clk) begin
     if(!CPU_RESETN) begin
         write_fifo_state <= IDLE;
     end else begin
-        unique case (write_fifo_state)
+        if(valid_processed && !fifo_full) begin
+            fifo_write_data <= processed_sample_out;
+            fifo_wr_en      <= 1'b1;
+        end
+        /*unique case (write_fifo_state)
             IDLE: begin
                 if(pcm_ready && !fifo_full) begin
                     fifo_write_data <= pcm_out[7:0];
@@ -146,7 +150,7 @@ always_ff @(posedge clk) begin
                 end
             end
             default: write_fifo_state <= IDLE;
-        endcase
+        endcase*/
     end
 end
 
