@@ -12,12 +12,15 @@ module down_sample_and_resolution #(
     output logic valid_out,
     output logic [DATA_OUT_WIDTH - 1:0] data_out
 );
+    localparam RESOLUTION_DIV_SHIFT  = DATA_IN_WIDTH - DATA_OUT_WIDTH;
+    localparam VALUE_SUM_TO_UNSIGNED = 2**(DATA_IN_WIDTH - 1);
+    localparam NUM_BITS_TO_EXTEND    = 32 - DATA_IN_WIDTH;
 
     logic [31:0] acc;
     logic [$clog2(DECIMATION_FACTOR):0] counter;
     logic valid_acc;
 
-    logic [15:0] acc_out;
+    logic [DATA_IN_WIDTH:0] acc_out;
     logic valid_acc_out;
 
     always_ff @(posedge clk ) begin
@@ -28,7 +31,7 @@ module down_sample_and_resolution #(
             acc_out       <= 0;
         end else begin
             if(valid_in) begin
-                acc     <= acc + {{16{data_in[15]}}, data_in};
+                acc     <= acc + {{NUM_BITS_TO_EXTEND{data_in[DATA_IN_WIDTH - 1]}}, data_in};
                 counter <= counter + 1;
             end
 
@@ -43,7 +46,7 @@ module down_sample_and_resolution #(
         end
     end
 
-    logic [15:0] product;
+    logic [DATA_IN_WIDTH:0] product;
     logic valid_product;
 
     always_ff @(posedge clk) begin
@@ -56,9 +59,9 @@ module down_sample_and_resolution #(
             valid_product <= 0;
         end else begin
             valid_product <= valid_acc_out;
-            product       <= acc_out + 'd32768; //  Desloca o intervalo de [-32768, +32767] para [0, 65535], removendo o sinal
+            product       <= acc_out + VALUE_SUM_TO_UNSIGNED; //  Desloca o intervalo de [-32768, +32767] para [0, 65535], removendo o sinal
             valid_out     <= valid_product;
-            data_out      <= product >> 8;      // Divide por 8
+            data_out      <= product >> RESOLUTION_DIV_SHIFT; // Divide por 8
         end
     end
 

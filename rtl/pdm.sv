@@ -1,15 +1,17 @@
 module PDM #(
-    parameter DECIMATION_FACTOR  = 256,
-    parameter DATA_WIDTH         = 16,
-    parameter FIR_TAPS           = 64,
-    parameter CLK_FREQ           = 100_000_000,
-    parameter PDM_CLK_FREQ       = 1_800_000,
-    parameter CIC_STAGES         = 4,
-    parameter FIFO_DEPTH         = 524288, // 520kB
-    parameter FIFO_WIDTH         = 8,
-    parameter SPI_BITS_PER_WORD  = 8,
-    parameter ENABLE_COMPRESSION = 1,
-    parameter PDM_CHANNEL        = 0 // 0 - Canal esquerdo, 1 - Canal direito
+    parameter DECIMATION_FACTOR        = 256,
+    parameter DATA_WIDTH               = 16,
+    parameter FIR_TAPS                 = 64,
+    parameter CLK_FREQ                 = 100_000_000,
+    parameter PDM_CLK_FREQ             = 1_800_000,
+    parameter CIC_STAGES               = 4,
+    parameter FIFO_DEPTH               = 524288, // 520kB
+    parameter FIFO_WIDTH               = 8,
+    parameter SPI_BITS_PER_WORD        = 8,
+    parameter ENABLE_COMPRESSION       = 1,
+    parameter PDM_CHANNEL              = 0, // 0 - Canal esquerdo, 1 - Canal direito
+    parameter SECOND_DECIMATION_FACTOR = 2,
+    parameter COMPRESSED_DATA_WIDTH    = 8
 ) (
     input  logic clk,
     input  logic rst_n,
@@ -59,12 +61,12 @@ pdm_capture #(
 logic valid_processed;
 logic [7:0] processed_sample_out;
 
-`ifdef ENABLE_COMPRESSION
-
+generate
+if(ENABLE_COMPRESSION) begin
 down_sample_and_resolution #(
-    .DATA_IN_WIDTH     (16),
-    .DATA_OUT_WIDTH    (8),
-    .DECIMATION_FACTOR (2)
+    .DATA_IN_WIDTH     (DATA_WIDTH),
+    .DATA_OUT_WIDTH    (COMPRESSED_DATA_WIDTH),
+    .DECIMATION_FACTOR (SECOND_DECIMATION_FACTOR)
 ) u_downsample (
     .clk        (clk),
     .rst_n      (rst_n),
@@ -75,8 +77,8 @@ down_sample_and_resolution #(
     .valid_out  (valid_processed),
     .data_out   (processed_sample_out)
 );
-
-`endif
+end 
+endgenerate
 
 SPI_Slave #(
     .SPI_BITS_PER_WORD (SPI_BITS_PER_WORD)
@@ -130,12 +132,13 @@ always_ff @(posedge clk) begin
     if(!rst_n) begin
         write_fifo_state <= IDLE;
     end else begin
-        `ifdef ENABLE_COMPRESSION
+
+    if(ENABLE_COMPRESSION) begin
         if(valid_processed && !fifo_full) begin
             fifo_write_data <= processed_sample_out;
             fifo_wr_en      <= 1'b1;
         end
-        `else
+    end else begin
         unique case (write_fifo_state)
             IDLE: begin
                 if(pcm_ready && !fifo_full) begin
@@ -155,7 +158,8 @@ always_ff @(posedge clk) begin
             end
             default: write_fifo_state <= IDLE;
         endcase
-        `endif
+    end
+
     end
 end
 

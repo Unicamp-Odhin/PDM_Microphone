@@ -19,17 +19,19 @@ module top (
 
 
 PDM #(
-    .DECIMATION_FACTOR   (256),
-    .DATA_WIDTH          (16),
-    .FIR_TAPS            (64),
-    .CLK_FREQ            (100_000_000),
-    .PDM_CLK_FREQ        (1_800_000),
-    .CIC_STAGES          (4),
-    .FIFO_DEPTH          (524288),
-    .FIFO_WIDTH          (8),
-    .SPI_BITS_PER_WORD   (8),
-    .ENABLE_COMPRESSION  (1),
-    .PDM_CHANNEL         (0)
+    .DECIMATION_FACTOR        (256),
+    .DATA_WIDTH               (16),
+    .FIR_TAPS                 (64),
+    .CLK_FREQ                 (100_000_000),
+    .PDM_CLK_FREQ             (1_800_000),
+    .CIC_STAGES               (4),
+    .FIFO_DEPTH               (524288),
+    .FIFO_WIDTH               (8),
+    .SPI_BITS_PER_WORD        (8),
+    .ENABLE_COMPRESSION       (1),
+    .PDM_CHANNEL              (0),
+    .SECOND_DECIMATION_FACTOR (2),
+    .COMPRESSED_DATA_WIDTH    (8)
 ) pdm_inst (
     .clk         (clk),        // sys clock
     .rst_n       (CPU_RESETN), // reset (ativo baixo)
