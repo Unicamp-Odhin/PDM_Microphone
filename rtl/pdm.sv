@@ -1,36 +1,32 @@
-module top (
+module PDM #(
+    parameter DECIMATION_FACTOR  = 256,
+    parameter DATA_WIDTH         = 16,
+    parameter FIR_TAPS           = 64,
+    parameter CLK_FREQ           = 100_000_000,
+    parameter PDM_CLK_FREQ       = 1_800_000,
+    parameter CIC_STAGES         = 4,
+    parameter FIFO_DEPTH         = 524288, // 520kB
+    parameter FIFO_WIDTH         = 8,
+    parameter SPI_BITS_PER_WORD  = 8,
+    parameter ENABLE_COMPRESSION = 1,
+    parameter PDM_CHANNEL        = 0 // 0 - Canal esquerdo, 1 - Canal direito
+) (
     input  logic clk,
-    input  logic CPU_RESETN,
+    input  logic rst_n,
 
-    input  logic rx,
-    output logic tx,
-
-    output logic [15:0]LED,
+    output logic [15:0] LED,
 
     input  logic mosi,
     output logic miso,
     input  logic sck,
     input  logic cs,
-    output logic taqui, 
-
-    input  logic [15:0] SW,
-
-    output logic [3:0] VGA_R,
-    output logic [3:0] VGA_G,
-    output logic [3:0] VGA_B,
-    output logic VGA_HS,
-    output logic VGA_VS,
 
     output logic M_CLK,      // Clock do microfone
     output logic M_LRSEL,    // Left/Right Select (Escolha do canal)
 
     input  logic M_DATA,     // Dados do microfone
 
-    output logic i2s_clk,    // Clock do I2S
-    output logic i2s_ws,     // Word Select do I2S
-    input  logic i2s_sd,     // Dados do I2S
-
-    output logic [7:0] JC
+    output logic [7:0] debug_leds
 );
 
 logic [2:0] busy_sync;
@@ -42,18 +38,16 @@ logic [7:0] spi_send_data;
 logic [15:0] pcm_out;
 logic pcm_ready;
 
-// Instanciação do módulo
-
 pdm_capture_fir #(
-    .DECIMATION_FACTOR (256),
-    .DATA_WIDTH        (16),
-    .FIR_TAPS          (64),
-    .CLK_FREQ          (100_000_000), // Frequência do clock do sistema
-    .PDM_CLK_FREQ      (1_800_000),   // Frequência do clock PDM
-    .CIC_STAGES        (4)            // Número de estágios do CIC
+    .DECIMATION_FACTOR (DECIMATION_FACTOR),
+    .DATA_WIDTH        (DATA_WIDTH),
+    .FIR_TAPS          (FIR_TAPS),
+    .CLK_FREQ          (CLK_FREQ),     // Frequência do clock do sistema
+    .PDM_CLK_FREQ      (PDM_CLK_FREQ), // Frequência do clock PDM
+    .CIC_STAGES        (CIC_STAGES)    // Número de estágios do CIC
 ) u_pdm_capture_fir (
     .clk        (clk),
-    .rst_n      (CPU_RESETN),
+    .rst_n      (rst_n),
 
     .pdm_clk    (M_CLK),
     .pdm_data   (M_DATA),
@@ -65,9 +59,11 @@ pdm_capture_fir #(
 logic valid_processed;
 logic [7:0] processed_sample_out;
 
+`ifdef ENABLE_COMPRESSION
+
 down_sample_and_resolution u_downsample (
     .clk        (clk),
-    .rst_n      (CPU_RESETN),
+    .rst_n      (rst_n),
 
     .valid_in   (pcm_ready),
     .data_in    (pcm_out),
@@ -76,11 +72,13 @@ down_sample_and_resolution u_downsample (
     .data_out   (processed_sample_out)
 );
 
+`endif
+
 SPI_Slave #(
-    .SPI_BITS_PER_WORD (8)
+    .SPI_BITS_PER_WORD (SPI_BITS_PER_WORD)
 ) U1(
     .clk            (clk),
-    .rst_n          (CPU_RESETN),
+    .rst_n          (rst_n),
 
     .sck            (sck),
     .cs             (cs),
@@ -100,11 +98,11 @@ logic fifo_wr_en, fifo_rd_en, fifo_full, fifo_empty;
 logic [7:0] fifo_read_data, fifo_write_data;
 
 FIFO #(
-    .DEPTH        (524288), // 520kB
-    .WIDTH        (8)
+    .DEPTH        (FIFO_DEPTH), // 520kB
+    .WIDTH        (FIFO_WIDTH) // 8 bits
 ) tx_fifo (
     .clk          (clk),
-    .rst_n        (CPU_RESETN),
+    .rst_n        (rst_n),
 
     .wr_en_i      (fifo_wr_en),
     .rd_en_i      (fifo_rd_en),
@@ -125,14 +123,16 @@ write_fifo_state_t write_fifo_state;
 always_ff @(posedge clk) begin
     fifo_wr_en <= 1'b0;
 
-    if(!CPU_RESETN) begin
+    if(!rst_n) begin
         write_fifo_state <= IDLE;
     end else begin
+        `ifdef ENABLE_COMPRESSION
         if(valid_processed && !fifo_full) begin
             fifo_write_data <= processed_sample_out;
             fifo_wr_en      <= 1'b1;
         end
-        /*unique case (write_fifo_state)
+        `else
+        unique case (write_fifo_state)
             IDLE: begin
                 if(pcm_ready && !fifo_full) begin
                     fifo_write_data <= pcm_out[7:0];
@@ -150,12 +150,13 @@ always_ff @(posedge clk) begin
                 end
             end
             default: write_fifo_state <= IDLE;
-        endcase*/
+        endcase
+        `endif
     end
 end
 
 always_ff @(posedge clk) begin
-    if(!CPU_RESETN) begin
+    if(!rst_n) begin
         busy_sync <= 3'b000;
     end else begin
         busy_sync <= {busy_sync[1:0], busy};
@@ -167,7 +168,7 @@ logic write_back_fifo;
 always_ff @(posedge clk) begin
     fifo_rd_en <= 1'b0;
 
-    if(!CPU_RESETN) begin
+    if(!rst_n) begin
         data_in_valid <= 1'b0;
         spi_send_data <= 8'b0;
         write_back_fifo <= 1'b0;
@@ -193,36 +194,18 @@ always_ff @(posedge clk) begin
     end
 end
 
-logic [14:0] led;
-
-always_ff @(posedge clk) begin
-    if(!CPU_RESETN) begin
-        led <= 16'h616C;
-    end else begin
-        if(data_out_valid) begin
-            led <= {leds, 6'b000000, fifo_empty};
-        end
-    end
-end
-
 assign busy_posedge = ~busy_sync[2] & busy_sync[1];
-assign M_LRSEL      = 1'b0; // Canal esquerdo
+assign M_LRSEL      = PDM_CHANNEL; // Canal esquerdo
 assign LED          = pcm_out;
 
-assign VGA_R  = 4'b0000;
-assign VGA_G  = 4'b0000;
-assign VGA_B  = 4'b0000;
-assign VGA_HS = 1'b0;
-assign VGA_VS = 1'b0;
-
-assign JC[0] = ~fifo_empty;
-assign JC[1] = 1'b1;
-assign JC[2] = ~fifo_full;
-assign JC[3] = 1'b1;
-assign JC[4] = ~busy;
-assign JC[5] = 1'b1;
-assign JC[6] = 1'b1;
-assign JC[7] = 1'b1;
+assign debug_leds[0] = ~fifo_empty;
+assign debug_leds[1] = 1'b1;
+assign debug_leds[2] = ~fifo_full;
+assign debug_leds[3] = 1'b1;
+assign debug_leds[4] = ~busy;
+assign debug_leds[5] = 1'b1;
+assign debug_leds[6] = 1'b1;
+assign debug_leds[7] = 1'b1;
 
 endmodule
 
