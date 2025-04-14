@@ -1,16 +1,20 @@
-module down_sample_and_resolution (
+module down_sample_and_resolution #(
+    parameter int DATA_IN_WIDTH     = 16,
+    parameter int DATA_OUT_WIDTH    = 8,
+    parameter int DECIMATION_FACTOR = 2
+) (
     input  logic clk,
     input  logic rst_n,
 
     input  logic valid_in,
-    input  logic [15:0] data_in,
+    input  logic [DATA_IN_WIDTH - 1:0] data_in,
 
     output logic valid_out,
-    output logic [7:0] data_out
+    output logic [DATA_OUT_WIDTH - 1:0] data_out
 );
 
     logic [31:0] acc;
-    logic [1:0] counter;
+    logic [$clog2(DECIMATION_FACTOR):0] counter;
     logic valid_acc;
 
     logic [15:0] acc_out;
@@ -28,8 +32,8 @@ module down_sample_and_resolution (
                 counter <= counter + 1;
             end
 
-            if(counter == 'd2) begin
-                acc_out       <= acc >>> 1;
+            if(counter == DECIMATION_FACTOR) begin
+                acc_out       <= acc >>> $clog2(DECIMATION_FACTOR);
                 valid_acc_out <= 1;
                 acc           <= 0;
                 counter       <= 0;
@@ -52,9 +56,9 @@ module down_sample_and_resolution (
             valid_product <= 0;
         end else begin
             valid_product <= valid_acc_out;
-            product       <= acc_out + 'd32768;
+            product       <= acc_out + 'd32768; //  Desloca o intervalo de [-32768, +32767] para [0, 65535], removendo o sinal
             valid_out     <= valid_product;
-            data_out      <= $signed(product >>> 8);
+            data_out      <= product >> 8;      // Divide por 8
         end
     end
 

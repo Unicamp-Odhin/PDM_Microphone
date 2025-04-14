@@ -38,7 +38,7 @@ logic [7:0] spi_send_data;
 logic [15:0] pcm_out;
 logic pcm_ready;
 
-pdm_capture_fir #(
+pdm_capture #(
     .DECIMATION_FACTOR (DECIMATION_FACTOR),
     .DATA_WIDTH        (DATA_WIDTH),
     .FIR_TAPS          (FIR_TAPS),
@@ -61,7 +61,11 @@ logic [7:0] processed_sample_out;
 
 `ifdef ENABLE_COMPRESSION
 
-down_sample_and_resolution u_downsample (
+down_sample_and_resolution #(
+    .DATA_IN_WIDTH     (16),
+    .DATA_OUT_WIDTH    (8),
+    .DECIMATION_FACTOR (2)
+) u_downsample (
     .clk        (clk),
     .rst_n      (rst_n),
 

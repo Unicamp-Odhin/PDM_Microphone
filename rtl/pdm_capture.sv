@@ -1,4 +1,4 @@
-module pdm_capture_fir #(
+module pdm_capture #(
     parameter DECIMATION_FACTOR = 128,
     parameter DATA_WIDTH        = 16,
     parameter FIR_TAPS          = 64,
