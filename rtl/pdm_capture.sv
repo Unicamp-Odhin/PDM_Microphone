@@ -23,17 +23,17 @@ module pdm_capture #(
     logic [1:0] edge_counter;
 
     logic signed [31:0] integrator [0:CIC_STAGES-1];
-    logic signed [31:0] comb [0:CIC_STAGES-1];
+    logic signed [31:0] comb       [0:CIC_STAGES-1];
     logic signed [31:0] comb_delay [0:CIC_STAGES-1];
-    logic [15:0] fir_buffer [0:FIR_TAPS-1];
+    logic        [15:0] fir_buffer [0:FIR_TAPS-1];
     logic signed [31:0] fir_sum;
 
-    integer i;
+    integer i, j, k;
 
     logic [8:0] decim_counter;
-    logic signed [DATA_WIDTH-1:0] pcm_temp;
+    logic signed [DATA_WIDTH-1:0] cic_out;
     logic [15:0] sample_count;
-    logic [5:0] fir_index;
+    logic  [5:0] fir_index;
 
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
@@ -68,9 +68,9 @@ module pdm_capture #(
     // CIC Comb Stage
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            for (i = 0; i < CIC_STAGES; i = i + 1) begin
-                comb[i]       <= 0;
-                comb_delay[i] <= 0;
+            for (j = 0; j < CIC_STAGES; j = j + 1) begin
+                comb[j]       <= 0;
+                comb_delay[j] <= 0;
             end
 
             decim_counter <= 0;
@@ -82,16 +82,16 @@ module pdm_capture #(
                 comb[0] <= integrator[CIC_STAGES-1] - comb_delay[0];
                 comb_delay[0] <= integrator[CIC_STAGES-1];
                 
-                for (i = 1; i < CIC_STAGES; i = i + 1) begin
-                    comb[i] <= comb[i-1] - comb_delay[i];
-                    comb_delay[i] <= comb[i-1];
+                for (j = 1; j < CIC_STAGES; j = j + 1) begin
+                    comb[j] <= comb[j-1] - comb_delay[j];
+                    comb_delay[j] <= comb[j-1];
                 end
 
-                pcm_temp <= $signed(comb[CIC_STAGES-1][28:13]);
+                cic_out   <= $signed(comb[CIC_STAGES-1][28:13]);
                 cic_ready <= 1;
             end else begin
                 decim_counter <= decim_counter + 1;
-                cic_ready <= 0;
+                cic_ready     <= 0;
             end
         end
     end
@@ -107,20 +107,20 @@ module pdm_capture #(
             fir_avg   <= 0;
             fir_ready <= 0;
 
-            for (i = 0; i < FIR_TAPS; i = i + 1) fir_buffer[i] <= 0;
+            for (k = 0; k < FIR_TAPS; k = k + 1) fir_buffer[k] <= 0;
         end else if (cic_ready) begin
             // Atualiza o buffer com o novo valor de entrada
-            fir_buffer[fir_index] <= pcm_temp;
+            fir_buffer[fir_index] <= cic_out;
             fir_index <= (fir_index + 1) % FIR_TAPS;
 
             // Calcula a soma de todos os taps do filtro FIR
             fir_sum = 0;
-            for (i = 0; i < FIR_TAPS; i = i + 1) begin
-                fir_sum = fir_sum + fir_buffer[i];
+            for (k = 0; k < FIR_TAPS; k = k + 1) begin
+                fir_sum = fir_sum + fir_buffer[k];
             end
 
             // Normaliza a saída e envia para pcm_out
-            fir_avg <= fir_sum >> $clog2(FIR_TAPS);
+            fir_avg  <= fir_sum >> $clog2(FIR_TAPS);
             fir_ready <= 1;
         end else begin
             fir_ready <= 0;

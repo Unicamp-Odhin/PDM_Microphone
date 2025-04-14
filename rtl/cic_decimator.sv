@@ -1,8 +1,8 @@
 module cic_decimator #(
-    parameter N         = 3,               // Número de estágios
-    parameter R         = 8,               // Fator de decimação
-    parameter IN_WIDTH  = 16,              // Largura da entrada PCM
-    parameter OUT_WIDTH = 16               // Largura da saída
+    parameter N         = 3,  // Número de estágios
+    parameter R         = 8,  // Fator de decimação
+    parameter IN_WIDTH  = 16, // Largura da entrada PCM
+    parameter OUT_WIDTH = 16  // Largura da saída
 )(
     input  logic                        clk,
     input  logic                        rst_n,
@@ -12,8 +12,8 @@ module cic_decimator #(
     output logic signed [OUT_WIDTH-1:0] out_sample
 );
 
-    localparam ACC_WIDTH  = IN_WIDTH + N*4;
-    localparam GAIN_SHIFT = $clog2(R ** N); // log2(R^N) para o shift
+    localparam ACC_WIDTH  = IN_WIDTH + N * 4;
+    localparam GAIN_SHIFT = $clog2(R ** N); // log2(R ^ N) para o shift
 
     // Limites de saturação
     localparam signed [OUT_WIDTH-1:0] MAX_OUT =  {1'b0, {(OUT_WIDTH-1){1'b1}}};
@@ -36,11 +36,11 @@ module cic_decimator #(
                 integrator[i] <= '0;
                 comb_delay[i] <= '0;
             end
-            comb_output   <= '0;
+            comb_output    <= '0;
             shifted_output <= '0;
-            decim_cnt     <= '0;
-            out_sample    <= '0;
-            out_valid     <= 0;
+            decim_cnt      <= '0;
+            out_sample     <= '0;
+            out_valid      <= 0;
         end else if (in_valid) begin
             // Integradores
             integrator[0] <= integrator[0] + in_sample;
