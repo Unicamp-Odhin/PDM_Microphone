@@ -3,7 +3,7 @@ import sys
 import struct
 
 # Configurações do arquivo WAV
-SAMPLE_RATE = 3515 * 35  # Frequência de amostragem (em Hz)
+SAMPLE_RATE = 3515 * 36  # Frequência de amostragem (em Hz)
 NUM_CHANNELS = 1     # Número de canais (1 = mono, 2 = estéreo)
 SAMPLE_WIDTH = 1     # Largura de amostra (em bytes, 2 = 16 bits)
 
