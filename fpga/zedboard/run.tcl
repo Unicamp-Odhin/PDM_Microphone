@@ -1,5 +1,5 @@
 read_verilog -sv main.sv
-read_verilog -sv ../../rtl/pdm.sv
+read_verilog -sv ../../rtl/pdm_fpga.sv
 read_verilog -sv ../../rtl/spi_slave.sv
 read_verilog -sv ../../rtl/pdm_capture.sv
 read_verilog -sv ../../rtl/down_sample_and_resolution.sv
