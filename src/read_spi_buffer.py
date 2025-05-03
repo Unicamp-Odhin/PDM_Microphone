@@ -13,9 +13,11 @@ spi.mode = 0
 num_bytes = 16
 
 # Enviar um comando de leitura e ler 16 bytes (dependendo do dispositivo, o comando pode ser diferente ou não necessário)
-response = spi.xfer2([0x00] * num_bytes)  # Envia 16 bytes zeros para ler 16 bytes de resposta
+response = spi.xfer2(
+    [0x00] * num_bytes
+)  # Envia 16 bytes zeros para ler 16 bytes de resposta
 
 # Imprimir a resposta em hexadecimal
-print("Resposta:", ' '.join(f'{byte:02X}' for byte in response))
+print('Resposta:', ' '.join(f'{byte:02X}' for byte in response))
 
 spi.close()

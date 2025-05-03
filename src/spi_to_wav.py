@@ -11,7 +11,7 @@ CHUNK_SIZE = 4096  # Ler 4096 bytes por vez para não sobrecarregar a memória
 TOTAL_BYTES = 524288
 
 # Nome do arquivo WAV a ser gerado
-OUTPUT_FILENAME = "output.wav"
+OUTPUT_FILENAME = 'output.wav'
 
 # Configurar o dispositivo SPI
 spi = spidev.SpiDev()

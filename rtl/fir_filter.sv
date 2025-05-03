@@ -26,7 +26,7 @@ module fir_filter #(
 
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            acc <= 0;
+            acc      <= 0;
             out_data <= 0;
             for (i = 0; i < TAP_NUM; i = i + 1) begin
                 delay_line[i] <= 0;

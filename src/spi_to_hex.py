@@ -6,11 +6,11 @@ SPI_CS = 0
 SPI_MAX_SPEED = 3000000
 SPI_MODE = 0
 CHUNK_SIZE = 4096  # Ler 4096 bytes por vez para não sobrecarregar a memória
-#TOTAL_BYTES = 131072
+# TOTAL_BYTES = 131072
 TOTAL_BYTES = 8388608
 
 # Nome do arquivo de dump hexadecimal
-OUTPUT_FILENAME = "output.hex"
+OUTPUT_FILENAME = 'output.hex'
 
 # Configurar o dispositivo SPI
 spi = spidev.SpiDev()

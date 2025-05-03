@@ -25,7 +25,9 @@ def plot_pdm(pdm_bits, window_size=1000):
     plt.subplots_adjust(bottom=0.25)
 
     # Mostra apenas uma janela do sinal
-    l, = plt.plot(pdm_bits[:window_size], linestyle='-', marker='', color='blue')
+    (l,) = plt.plot(
+        pdm_bits[:window_size], linestyle='-', marker='', color='blue'
+    )
     ax.set_title('Sinal PDM Extraído do Arquivo HEX')
     ax.set_xlabel('Amostra')
     ax.set_ylabel('Nível PDM (0 ou 1)')
@@ -33,11 +35,18 @@ def plot_pdm(pdm_bits, window_size=1000):
 
     # Adiciona um slider para navegar
     ax_slider = plt.axes([0.25, 0.1, 0.65, 0.03])
-    slider = Slider(ax_slider, 'Posição', 0, len(pdm_bits) - window_size, valinit=0, valstep=1)
+    slider = Slider(
+        ax_slider,
+        'Posição',
+        0,
+        len(pdm_bits) - window_size,
+        valinit=0,
+        valstep=1,
+    )
 
     def update(val):
         pos = int(slider.val)
-        l.set_ydata(pdm_bits[pos:pos + window_size])
+        l.set_ydata(pdm_bits[pos : pos + window_size])
         l.set_xdata(range(pos, pos + window_size))
         ax.relim()
         ax.autoscale_view()
@@ -59,5 +68,5 @@ def main():
     plot_pdm(pdm_bits, window_size=1000)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
