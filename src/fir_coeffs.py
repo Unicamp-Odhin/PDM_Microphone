@@ -35,9 +35,14 @@ def fir_lowpass(M, fc_norm, window_type='hamming', beta=0.0):
     elif window_type == 'bartlett':
         window = 1 - (2 * np.abs(n - M / 2)) / M
 
+    # Janela Retangular
+    elif window_type == 'rectangular':   # media movel com coeficientes iguais
+        # Janela retangular é equivalente a não aplicar janela
+        window = np.ones(M)
+
     else:
         raise ValueError(
-            'Janela inválida. Use: hamming, hanning, blackman, kaiser ou bartlett.'
+            'Janela inválida. Use: hamming, hanning, blackman, kaiser, bartlett ou rectangular.'
         )
 
     h_fir = h_ideal * window
@@ -76,7 +81,14 @@ def main():
         '--window',
         type=str,
         default='hamming',
-        choices=['hamming', 'hanning', 'blackman', 'kaiser', 'bartlett'],
+        choices=[
+            'hamming',
+            'hanning',
+            'blackman',
+            'kaiser',
+            'bartlett',
+            'rectangular',
+        ],
         help='Tipo de janela (default: hamming)',
     )
     parser.add_argument(
