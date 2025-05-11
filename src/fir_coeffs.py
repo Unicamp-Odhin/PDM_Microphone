@@ -133,6 +133,9 @@ def main():
         print('\nCoeficientes quantizados (16 bits ponto fixo):')
         print(h_fixed.tolist())
 
+    sum_coeff = sum(h_fixed)
+    print(f"Soma dos coeficientes: {sum_coeff}")
+
     # Plota resposta em frequência
     w, h = signal.freqz(h_fir)
     plt.figure(figsize=(10, 4))

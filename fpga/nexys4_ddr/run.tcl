@@ -1,13 +1,14 @@
 read_verilog -sv main.sv
+read_verilog -sv ../../rtl/pdm.sv
 read_verilog -sv ../../rtl/pdm_fpga.sv
 read_verilog -sv ../../rtl/spi_slave.sv
 read_verilog -sv ../../rtl/pdm_capture.sv
+read_verilog -sv ../../rtl/moving_average.sv
 read_verilog -sv ../../rtl/down_sample_and_resolution.sv
 #read_verilog -sv ../../rtl/cic_decimator.sv
 #read_verilog -sv ../../rtl/pdm_deserializer.sv
 read_verilog -sv ../../rtl/fifo.sv
 
-set_param general.maxThreads 16
 
 read_xdc "pinout.xdc"
 set_property PROCESSING_ORDER EARLY [get_files pinout.xdc]

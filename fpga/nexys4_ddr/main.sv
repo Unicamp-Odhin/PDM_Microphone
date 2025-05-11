@@ -18,7 +18,7 @@ module top (
 );
 
 
-PDM #(
+PDM_FPGA #(
     .DECIMATION_FACTOR        (256),
     .DATA_WIDTH               (16),
     .FIR_TAPS                 (64),
@@ -28,8 +28,8 @@ PDM #(
     .FIFO_DEPTH               (524288),
     .FIFO_WIDTH               (8),
     .SPI_BITS_PER_WORD        (8),
-    .ENABLE_COMPRESSION       (1),
-    .PDM_CHANNEL              (0),
+    .ENABLE_COMPRESSION       (0),
+    .PDM_CHANNEL              (1),
     .SECOND_DECIMATION_FACTOR (2),
     .COMPRESSED_DATA_WIDTH    (8)
 ) pdm_inst (

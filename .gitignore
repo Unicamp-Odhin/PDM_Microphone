@@ -77,3 +77,13 @@ env/
 site/
 .vscode
 hex_to_wav
+ip_project
+# Vivado IP build artifacts
+*.bmj
+*_bmstub.v
+*_board.xdc
+*_ooc.xdc
+*.veo
+*.xml
+doc/
+mmcm_pll_drp_func_*.vh

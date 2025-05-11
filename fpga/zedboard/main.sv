@@ -18,7 +18,7 @@ module top (
 );
 
 
-PDM #(
+PDM_FPGA #(
     .DECIMATION_FACTOR        (256),
     .DATA_WIDTH               (16),
     .FIR_TAPS                 (64),

@@ -1,52 +1,62 @@
-module fir_filter #(
+module fir_pipeline #(
     parameter DATA_WIDTH = 16,
     parameter TAP_NUM    = 64
 )(
-    input  logic                         clk,
-    input  logic                         rst_n,
-    input  logic signed [DATA_WIDTH-1:0] in_data,
-    output logic signed [DATA_WIDTH-1:0] out_data
+    input  logic                          clk,
+    input  logic                          rst_n,
+    input  logic                          in_valid,
+    input  logic signed [DATA_WIDTH-1:0]  in_data,
+    output logic                          out_valid,
+    output logic signed [DATA_WIDTH+15:0] out_data
 );
 
-    // Coeficientes do filtro FIR - Exemplo de filtro passa-baixa
-    logic signed [DATA_WIDTH-1:0] coeffs [0:TAP_NUM-1] = '{
-        1, 2, 3, 5, 7, 10, 14, 19,
-        24, 30, 35, 39, 43, 46, 48, 49,
-        49, 48, 46, 43, 39, 35, 30, 24,
-        19, 14, 10, 7, 5, 3, 2, 1,
-        1, 2, 3, 5, 7, 10, 14, 19,
-        24, 30, 35, 39, 43, 46, 48, 49,
-        49, 48, 46, 43, 39, 35, 30, 24,
-        19, 14, 10, 7, 5, 3, 2, 1
-    };
+    // Coeficientes do FIR (use os reais do seu projeto)
+    logic signed [DATA_WIDTH-1:0] coeffs [0:TAP_NUM-1] = '{16'd1, 16'd2, 16'd3, 16'd4}; // Exemplo
 
-    logic signed [31:0] acc;
-    logic signed [DATA_WIDTH-1:0] delay_line [0:TAP_NUM-1];
+    // Shift register de entrada
+    logic signed [DATA_WIDTH-1:0] shift_reg [0:TAP_NUM-1];
+
+    // Registradores intermediários para cada estágio
+    logic signed [DATA_WIDTH*2-1:0] mult_stage [0:TAP_NUM-1];
+    logic signed [DATA_WIDTH*2+3:0] sum_stage [0:TAP_NUM];  // Soma acumulada
+    logic [TAP_NUM:0] valid_pipeline;
+
     integer i;
 
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            acc      <= 0;
-            out_data <= 0;
-            for (i = 0; i < TAP_NUM; i = i + 1) begin
-                delay_line[i] <= 0;
+            for (i = 0; i < TAP_NUM; i++) begin
+                shift_reg[i]  <= '0;
+                mult_stage[i] <= '0;
+                sum_stage[i]  <= '0;
             end
+            valid_pipeline <= '0;
         end else begin
-            acc <= 0;
+            // Avança pipeline do valid
+            valid_pipeline <= {valid_pipeline[TAP_NUM-1:0], in_valid};
 
-            // Atualiza a linha de atraso
-            for (i = TAP_NUM-1; i > 0; i = i - 1) begin
-                delay_line[i] <= delay_line[i-1];
-            end
-            delay_line[0] <= in_data;
-
-            // Acumula o produto dos coeficientes
-            for (i = 0; i < TAP_NUM; i = i + 1) begin
-                acc <= acc + delay_line[i] * coeffs[i];
+            // Shift dos dados de entrada
+            if (in_valid) begin
+                shift_reg[0] <= in_data;
+                for (i = 1; i < TAP_NUM; i++) begin
+                    shift_reg[i] <= shift_reg[i-1];
+                end
             end
 
-            // Normaliza a saída
-            out_data <= acc >>> 8;
+            // Multiplicação por coeficientes
+            for (i = 0; i < TAP_NUM; i++) begin
+                mult_stage[i] <= shift_reg[i] * coeffs[i];
+            end
+
+            // Acúmulo (pipeline de soma)
+            sum_stage[0] <= mult_stage[0];
+            for (i = 1; i < TAP_NUM; i++) begin
+                sum_stage[i] <= sum_stage[i-1] + mult_stage[i];
+            end
         end
     end
+
+    assign out_valid = valid_pipeline[TAP_NUM];  // O último estágio do pipeline indica a validade da saída
+    assign out_data  = sum_stage[TAP_NUM-1] >>> 15;  // Último estágio da soma
+
 endmodule
